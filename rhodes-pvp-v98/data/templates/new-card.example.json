@@ -1,0 +1,16 @@
+{
+  "name": "新干员",
+  "type": "干员",
+  "operatorType": "基础",
+  "level": 1,
+  "traits": [
+    "势力名"
+  ],
+  "feature": "势力名",
+  "profession": "先锋",
+  "attackRange": "近战",
+  "attack": 2,
+  "effect": "在这里填写卡牌效果。",
+  "id": "SD03-0001",
+  "image": "/images/cards/SD03-0001.webp"
+}

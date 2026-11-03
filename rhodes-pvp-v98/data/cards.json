@@ -1,0 +1,465 @@
+[
+  {
+    "name": "夜刀",
+    "type": "干员",
+    "operatorType": "基础",
+    "level": 1,
+    "traits": [
+      "罗德岛",
+      "行动组A4"
+    ],
+    "feature": "罗德岛",
+    "effect": "【部署时】通过展示手牌中的1名【行动组A4】特征干员，抽1张牌。",
+    "attack": 2,
+    "attackRange": "近战",
+    "id": "SD01-0001",
+    "image": ""
+  },
+  {
+    "name": "杜林",
+    "type": "干员",
+    "operatorType": "基础",
+    "level": 1,
+    "traits": [
+      "罗德岛",
+      "行动组A4"
+    ],
+    "feature": "罗德岛",
+    "effect": "【永续】同一条战线上的其他己方干员攻击力+1。",
+    "attack": 2,
+    "attackRange": "远程",
+    "profession": "术士",
+    "id": "SD01-0002",
+    "image": ""
+  },
+  {
+    "name": "巡林者",
+    "type": "干员",
+    "operatorType": "基础",
+    "level": 1,
+    "traits": [
+      "罗德岛",
+      "行动组A4"
+    ],
+    "feature": "罗德岛",
+    "effect": "【部署时】将手牌中的1名【巡林者】以外的【行动组A4】特征干员部署。",
+    "attack": 1,
+    "attackRange": "远程",
+    "profession": "特种",
+    "id": "SD01-0003",
+    "image": ""
+  },
+  {
+    "name": "杜宾",
+    "type": "干员",
+    "operatorType": "基础",
+    "level": 2,
+    "traits": [
+      "罗德岛",
+      "玻利瓦尔"
+    ],
+    "feature": "罗德岛",
+    "effect": "【永续】此卡也视为远程干员。当进行远程攻击时，此干员的攻击力-1。\\n【部署时】翻开卡组最上方1张卡，若为基础【罗德岛】干员，可以将其部署。",
+    "attack": 4,
+    "attackRange": "近战",
+    "canAttackAsRanged": true,
+    "rangedAttackModifier": -1,
+    "profession": "近卫",
+    "id": "SD01-0004",
+    "image": ""
+  },
+  {
+    "name": "黑角",
+    "type": "干员",
+    "operatorType": "基础",
+    "level": 1,
+    "traits": [
+      "罗德岛",
+      "行动组A4"
+    ],
+    "feature": "罗德岛",
+    "effect": "【永续】此干员在前排时，同一战线上的敌方干员只能攻击此干员。",
+    "attack": 3,
+    "attackRange": "近战",
+    "forceAttackTargetWhenFront": true,
+    "profession": "重装",
+    "id": "SD01-0005",
+    "image": ""
+  },
+  {
+    "name": "红",
+    "type": "干员",
+    "operatorType": "基础",
+    "level": 2,
+    "traits": [
+      "罗德岛",
+      "S.W.E.E.P."
+    ],
+    "feature": "罗德岛",
+    "effect": "【部署时】查看己方卡组最上方2张牌，以己方喜欢的顺序进行排序。\\n【己方回合开始时】升级己方的基地卡。",
+    "attack": 3,
+    "attackRange": "近战",
+    "profession": "特种",
+    "id": "SD01-0006",
+    "image": ""
+  },
+  {
+    "name": "阿米娅",
+    "type": "干员",
+    "operatorType": "基础",
+    "level": 2,
+    "traits": [
+      "罗德岛",
+      "雷姆必拓"
+    ],
+    "feature": "罗德岛",
+    "effect": "【部署时】翻开卡组最上方3张牌，选择其中1张【罗德岛】干员卡牌加入手牌，剩余的牌以喜欢的顺序回到卡组顶。",
+    "attack": 4,
+    "attackRange": "远程",
+    "profession": "术士",
+    "id": "SD01-0007",
+    "image": "/images/cards/SD01-0007.webp"
+  },
+  {
+    "name": "阿米娅",
+    "type": "干员",
+    "operatorType": "精英化",
+    "level": 3,
+    "traits": [
+      "罗德岛"
+    ],
+    "feature": "罗德岛",
+    "effect": "【精英化时】可以将弃牌区中的1张【罗德岛】战术卡牌加入手牌。",
+    "attack": 7,
+    "attackRange": "远程",
+    "profession": "术士",
+    "id": "SD01-0008",
+    "image": ""
+  },
+  {
+    "name": "煌",
+    "type": "干员",
+    "operatorType": "基础",
+    "level": 2,
+    "traits": [
+      "罗德岛",
+      "维多利亚"
+    ],
+    "feature": "罗德岛",
+    "effect": "【永续】每回合1次，当己方使用【罗德岛】战术或此干员通过卡牌效果部署时，查看己方卡组最上方2张牌，选择其中1张加入手牌，剩余的牌回到卡组顶。",
+    "attack": 5,
+    "attackRange": "近战",
+    "profession": "近卫",
+    "id": "SD01-0009",
+    "image": ""
+  },
+  {
+    "name": "煌",
+    "type": "干员",
+    "operatorType": "精英化",
+    "level": 3,
+    "traits": [
+      "罗德岛",
+      "维多利亚"
+    ],
+    "feature": "罗德岛",
+    "effect": "当此干员通过抽卡以外的效果加入手牌时可以发动，将此干员在己方战场上的基础【煌】上精英化。\\n【精英化时】本回合不会被战斗击败。",
+    "attack": 8,
+    "attackRange": "近战",
+    "profession": "近卫",
+    "id": "SD01-0010",
+    "image": ""
+  },
+  {
+    "name": "命运的相遇",
+    "type": "战术卡",
+    "tacticType": "通常",
+    "level": 1,
+    "traits": [
+      "罗德岛"
+    ],
+    "feature": "罗德岛",
+    "effect": "【己方主要阶段】翻开己方卡组最上方2张牌。将其中1张卡公开并加入手牌，另1张卡回到卡组最上方。",
+    "id": "SD01-0011",
+    "image": ""
+  },
+  {
+    "name": "处决模式",
+    "type": "战术卡",
+    "tacticType": "通常",
+    "level": 2,
+    "traits": [
+      "罗德岛"
+    ],
+    "feature": "罗德岛",
+    "effect": "【己方主要阶段】部署1名2级干员。之后，若己方战场上存在【红】，升级己方的势力卡。",
+    "id": "SD01-0013",
+    "image": ""
+  },
+  {
+    "name": "沸腾爆裂",
+    "type": "战术卡",
+    "tacticType": "陷阱",
+    "triggerCondition": "对方干员登场",
+    "level": 2,
+    "traits": [
+      "罗德岛"
+    ],
+    "feature": "罗德岛",
+    "exclusive": [
+      "煌"
+    ],
+    "effect": "【专属】煌\n当敌方部署干员时可以使用，公开己方卡组最上方1张卡，若其为【罗德岛】特征的干员，则可以将己方弃牌区1名【罗德岛】干员加入手牌。",
+    "id": "SD01-0014",
+    "image": ""
+  },
+  {
+    "name": "精神爆发",
+    "level": 1,
+    "type": "战术卡",
+    "tacticType": "陷阱",
+    "triggerCondition": "对方攻击时",
+    "traits": [
+      "罗德岛"
+    ],
+    "feature": "罗德岛",
+    "effect": "当敌方干员发起攻击时可以使用，选择与此卡在相同战线的1名己方干员，从手牌将1名与其等级相同的干员部署在己方战场。",
+    "id": "SD01-0015",
+    "image": ""
+  },
+  {
+    "name": "德克萨斯",
+    "type": "干员",
+    "operatorType": "基础",
+    "level": 1,
+    "traits": [
+      "炎-龙门",
+      "企鹅物流"
+    ],
+    "feature": "炎-龙门",
+    "profession": "先锋",
+    "attackRange": "近战",
+    "attack": 2,
+    "effect": "【部署时】抽1张牌。\n【弃牌区】己方回合1次，可通过丢弃1张手牌，将此干员回到手牌。",
+    "id": "SD02-0001",
+    "image": ""
+  },
+  {
+    "name": "暗锁",
+    "type": "干员",
+    "operatorType": "基础",
+    "level": 1,
+    "traits": [
+      "炎-龙门",
+      "雷姆必拓"
+    ],
+    "feature": "炎-龙门",
+    "profession": "特种",
+    "attackRange": "近战",
+    "attack": 1,
+    "effect": "【被击败时】通过丢弃1张手牌，将对方战场上的1名干员移置于另一条战线上。",
+    "id": "SD02-0002",
+    "image": ""
+  },
+  {
+    "name": "阿消",
+    "type": "干员",
+    "operatorType": "基础",
+    "level": 1,
+    "traits": [
+      "炎-龙门"
+    ],
+    "feature": "炎-龙门",
+    "profession": "特种",
+    "attackRange": "近战",
+    "attack": 1,
+    "forceAttackTarget": true,
+    "effect": "【永续】同一战线上的敌方干员只能攻击此干员。\n【被击败时】可以通过丢弃2张手牌，将对方1名1级干员弹到手牌。",
+    "id": "SD02-0003",
+    "image": ""
+  },
+  {
+    "name": "空",
+    "type": "干员",
+    "operatorType": "基础",
+    "level": 1,
+    "traits": [
+      "炎-龙门",
+      "企鹅物流"
+    ],
+    "feature": "炎-龙门",
+    "profession": "辅助",
+    "attackRange": "远程",
+    "attack": 1,
+    "cannotAttack": true,
+    "effect": "【永续】此干员不能攻击。\n【永续】同一条战线上的其他己方干员攻击力+1。",
+    "id": "SD02-0004",
+    "image": ""
+  },
+  {
+    "name": "食铁兽",
+    "type": "干员",
+    "operatorType": "基础",
+    "level": 1,
+    "traits": [
+      "炎-龙门",
+      "炎"
+    ],
+    "feature": "炎-龙门",
+    "profession": "特种",
+    "attackRange": "近战",
+    "attack": 2,
+    "canAttackAsRanged": true,
+    "effect": "【永续】此卡也视为远程干员。\n【部署时】可以将同一战线上的攻击力不高于此干员的1名干员弹回手牌。",
+    "id": "SD02-0005",
+    "image": ""
+  },
+  {
+    "name": "星熊",
+    "type": "干员",
+    "operatorType": "基础",
+    "level": 2,
+    "traits": [
+      "炎-龙门",
+      "龙门近卫局"
+    ],
+    "feature": "炎-龙门",
+    "profession": "重装",
+    "attackRange": "近战",
+    "attack": 5,
+    "forceAttackTarget": true,
+    "effect": "【永续】同一战线上的敌方干员只能攻击此干员。\n【己方回合开始时】升级己方的势力卡。",
+    "id": "SD02-0006",
+    "image": ""
+  },
+  {
+    "name": "陈",
+    "type": "干员",
+    "operatorType": "基础",
+    "level": 2,
+    "traits": [
+      "炎-龙门",
+      "龙门近卫局"
+    ],
+    "feature": "炎-龙门",
+    "profession": "近卫",
+    "attackRange": "近战",
+    "attack": 4,
+    "maxAttacksPerTurn": 2,
+    "effect": "【永续】此干员可以攻击2次。",
+    "id": "SD02-0007",
+    "image": ""
+  },
+  {
+    "name": "陈",
+    "type": "干员",
+    "operatorType": "精英化",
+    "level": 3,
+    "traits": [
+      "炎-龙门",
+      "龙门近卫局"
+    ],
+    "feature": "炎-龙门",
+    "profession": "近卫",
+    "attackRange": "近战",
+    "attack": 7,
+    "effect": "【精英化时】将同一条战线上低于此干员攻击力的敌方干员全部击败。",
+    "id": "SD02-0008",
+    "image": ""
+  },
+  {
+    "name": "协同作战",
+    "type": "战术卡",
+    "tacticType": "通常",
+    "level": 1,
+    "traits": [
+      "炎-龙门"
+    ],
+    "feature": "炎-龙门",
+    "effect": "【己方主要阶段】选择己方的1名干员，直到回合结束为止，此干员获得与其相邻的1名己方干员的战斗力。",
+    "id": "SD02-0009",
+    "image": ""
+  },
+  {
+    "name": "诗怀雅",
+    "type": "干员",
+    "operatorType": "基础",
+    "level": 2,
+    "traits": [
+      "炎-龙门",
+      "龙门近卫局"
+    ],
+    "feature": "炎-龙门",
+    "profession": "近卫",
+    "attackRange": "近战",
+    "attack": 4,
+    "canAttackAsRanged": true,
+    "rangedAttackModifier": -1,
+    "effect": "【永续】此卡也视为远程干员。当进行远程攻击时，此干员的攻击力-1。\n【部署时】将弃牌区中1张【龙门】特征干员加入手牌。",
+    "id": "SD02-0010",
+    "image": ""
+  },
+  {
+    "name": "诗怀雅",
+    "type": "干员",
+    "operatorType": "精英化",
+    "level": 3,
+    "traits": [
+      "炎-龙门",
+      "龙门近卫局"
+    ],
+    "feature": "炎-龙门",
+    "profession": "近卫",
+    "attackRange": "近战",
+    "attack": 7,
+    "canAttackAsRanged": true,
+    "rangedAttackModifier": -1,
+    "effect": "【永续】此卡也视为远程干员。当进行远程攻击时，此干员的攻击力-1。\n【精英化时/己方回合开始时】将弃牌区中1张【龙门】卡牌加入手牌。",
+    "id": "SD02-0011",
+    "image": ""
+  },
+  {
+    "name": "大小姐的施舍",
+    "type": "战术卡",
+    "tacticType": "通常",
+    "level": 1,
+    "traits": [
+      "炎-龙门"
+    ],
+    "feature": "炎-龙门",
+    "effect": "【己方主要阶段】己方抽2张牌。之后，若己方战场上存在【诗怀雅】，升级己方的势力卡。",
+    "id": "SD02-0012",
+    "image": ""
+  },
+  {
+    "name": "准备作战",
+    "type": "战术卡",
+    "tacticType": "陷阱",
+    "triggerCondition": "对方攻击时",
+    "level": 2,
+    "traits": [
+      "炎-龙门"
+    ],
+    "feature": "炎-龙门",
+    "effect": "当敌方干员发起攻击时可以使用，抽1张牌并从手牌部署1名基础【龙门】干员。之后，若战场上存在【陈】和【诗怀雅】，可以无视等级条件将己方1张【龙门】干员精英化。",
+    "id": "SD02-0013",
+    "image": ""
+  },
+  {
+    "name": "赤霄·绝影",
+    "type": "战术卡",
+    "tacticType": "陷阱",
+    "triggerCondition": "对方攻击时",
+    "level": 2,
+    "traits": [
+      "炎-龙门"
+    ],
+    "feature": "炎-龙门",
+    "exclusive": [
+      "陈"
+    ],
+    "effect": "【专属】陈\n当敌方干员发起攻击时可以使用，击败1名战斗力高于【陈】的敌方干员。若未能消灭，使此次攻击无效。",
+    "id": "SD02-0014",
+    "image": ""
+  }
+]

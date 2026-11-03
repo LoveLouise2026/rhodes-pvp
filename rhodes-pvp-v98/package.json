@@ -1,0 +1,19 @@
+{
+  "name": "rhodes-card-game-pvp-v98",
+  "version": "0.98.0",
+  "private": true,
+  "description": "Rhodes card game v98 - PVP authority hardening, ordered state transitions, restored combat visuals",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check server.js",
+    "validate:cards": "node tools/validate-card-data.js",
+    "test:v98": "node tools/test-v98.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}
