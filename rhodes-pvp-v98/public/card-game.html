@@ -3848,6 +3848,11 @@ body:has(#appShellV68:not(.v68-battle-active)) .draw-flying-card{
 }
 
 @media(max-width:980px){
+    .v70-deck-manager-list{
+        flex:0 0 auto;
+        min-height:150px;
+        max-height:260px;
+    }
     .v70-deck-workspace{
         height:auto;
         grid-template-columns:1fr;
@@ -4434,6 +4439,7 @@ body:not(.v96-battle-active) #mulliganButton{
 }
 </style>
 
+<link rel="stylesheet" href="/online-effects.css">
 </head>
 
 <body>
@@ -4721,6 +4727,7 @@ body:not(.v96-battle-active) #mulliganButton{
 </div>
 
 <script src="/data/card-data.js"></script>
+<script src="/starter-decks.js"></script>
 <script>
 
 // =====================
@@ -24350,29 +24357,21 @@ window.recordCardZoneActionV62=function(
     <div class="v68-auth-box">
       <div class="v68-brand">RHODES CARD BATTLE</div>
       <h1>罗德岛卡牌对战</h1>
-      <div class="v68-tabs"><button id="authLoginTabV68" class="active">登录</button><button id="authRegisterTabV68">注册</button></div>
       <form id="loginFormV68" class="v68-form">
-        <input id="loginNameV68" placeholder="用户名" autocomplete="username">
-        <input id="loginPasswordV68" type="password" placeholder="密码" autocomplete="current-password">
-        <button class="v68-primary" type="submit">登录</button>
-      </form>
-      <form id="registerFormV68" class="v68-form" style="display:none">
-        <input id="registerNameV68" placeholder="用户名（2～24字符）" maxlength="24">
-        <input id="registerPasswordV68" type="password" placeholder="密码（至少4字符）">
-        <input id="registerPassword2V68" type="password" placeholder="再次输入密码">
-        <button class="v68-primary" type="submit">创建账号</button>
+        <input id="loginNameV68" placeholder="输入昵称（2～24字符）" maxlength="24" autocomplete="nickname" required>
+        <button class="v68-primary" type="submit">进入游戏</button>
       </form>
       <div id="authMessageV68" class="v68-msg"></div>
-      <div class="v68-note">当前为单机原型，账号仅保存在此浏览器本地；正式联机版再接服务器账号系统。</div>
+      <div class="v68-note">输入昵称即可游玩，无需密码。与朋友联机请选择自定义对战；卡组保存在当前浏览器。联机已接入两套卡池效果；对局中点击「联机操作」，按提示选择效果与目标。</div>
     </div>
   </section>
 
   <section id="mainMenuScreenV68" class="v68-screen">
-    <header class="v68-topbar"><div><div class="v68-brand small">RHODES CARD BATTLE</div><strong id="mainMenuUserV68">玩家</strong></div><button id="logoutButtonV68" class="v68-ghost">退出登录</button></header>
+    <header class="v68-topbar"><div><div class="v68-brand small">RHODES CARD BATTLE</div><strong id="mainMenuUserV68">玩家</strong></div><button id="logoutButtonV68" class="v68-ghost">更换昵称</button></header>
     <main class="v68-menu-wrap">
       <h1>主菜单</h1>
       <div class="v68-menu-grid">
-        <button id="menuMatchV68" class="v68-menu-card"><b>匹配模式</b><span>进入匹配大厅，进行标准对战</span></button>
+        <button id="menuMatchV68" class="v68-menu-card"><b>单人练习</b><span>与测试 AI 对战</span></button>
         <button id="menuCustomV68" class="v68-menu-card"><b>自定义对战模式</b><span>创建或加入指定房间</span></button>
         <button id="menuDeckV68" class="v68-menu-card"><b>编辑卡组</b><span>管理卡组与当前出战卡组</span></button>
         <button id="menuReplayV68" class="v68-menu-card"><b>观看录像</b><span>读取已保存的棋盘录像</span></button>
@@ -24557,19 +24556,15 @@ function screenMap(){return {auth:$("authScreenV68"),menu:$("mainMenuScreenV68")
 function showScreen(name){const m=screenMap();Object.keys(m).forEach(k=>m[k]&&m[k].classList.toggle("v68-active",k===name));const shell=$("appShellV68");if(shell)shell.classList.toggle("v68-battle-active",name==="battle");document.body.classList.toggle("v96-battle-active",name==="battle");}
 function getUser(){try{return sessionStorage.getItem(SESSION_KEY)||""}catch(e){return ""}}
 function setUser(v){try{v?sessionStorage.setItem(SESSION_KEY,v):sessionStorage.removeItem(SESSION_KEY)}catch(e){}}
-function accounts(){try{return JSON.parse(localStorage.getItem(ACCOUNT_KEY)||"{}")||{}}catch(e){return {}}}
-function saveAccounts(v){try{localStorage.setItem(ACCOUNT_KEY,JSON.stringify(v))}catch(e){}}
 function msg(text,ok){const el=$("authMessageV68");if(el){el.textContent=text||"";el.style.color=ok?"#a8d6b9":"#e1ad9d"}}
 function updateUser(){if($("mainMenuUserV68"))$("mainMenuUserV68").textContent=getUser()||"玩家"}
-function authTab(tab){const l=tab==="login";$("authLoginTabV68").classList.toggle("active",l);$("authRegisterTabV68").classList.toggle("active",!l);$("loginFormV68").style.display=l?"flex":"none";$("registerFormV68").style.display=l?"none":"flex";msg("")}
 window.showMainMenuV68=function(){updateUser();showScreen("menu")};
 window.showMatchLobby=function(){stopMatch();$("matchStatusV68").textContent="准备匹配";$("matchDescriptionV68").textContent="当前测试版将匹配到 AI 对手。";showScreen("match")};
 window.returnToMatchLobby=window.showMatchLobby;window.openMatchLobby=window.showMatchLobby;
 window.showCustomBattleRoom=function(){showScreen("custom");if($("customRoomPanelV68"))$("customRoomPanelV68").style.display="block"};window.returnToCustomBattleRoom=window.showCustomBattleRoom;window.openCustomBattleRoom=window.showCustomBattleRoom;window.showCustomRoom=window.showCustomBattleRoom;
 async function startBattle(mode){if(typeof setBattleEntryModeV67==="function")setBattleEntryModeV67(mode);showScreen("battle");if(typeof initializeBattleV69==="function")await initializeBattleV69()};window.startBattleFromMenuV68=startBattle;
-function register(e){e.preventDefault();const n=$("registerNameV68").value.trim(),p=$("registerPasswordV68").value,p2=$("registerPassword2V68").value;if(n.length<2)return msg("用户名至少需要2个字符。");if(p.length<4)return msg("密码至少需要4个字符。");if(p!==p2)return msg("两次输入的密码不一致。");const a=accounts();if(a[n])return msg("这个用户名已经存在。");a[n]={password:p,createdAt:new Date().toISOString()};saveAccounts(a);$("loginNameV68").value=n;authTab("login");msg("注册成功，请登录。",true)}
-function login(e){e.preventDefault();const n=$("loginNameV68").value.trim(),p=$("loginPasswordV68").value,a=accounts();if(!a[n]||a[n].password!==p)return msg("用户名或密码不正确。");setUser(n);updateUser();showScreen("menu")}
-function logout(){setUser("");$("loginPasswordV68").value="";showScreen("auth")}
+function login(e){e.preventDefault();const n=$("loginNameV68").value.trim();if(n.length<2||n.length>24)return msg("昵称需为2～24字符。");setUser(n);if(typeof window.getActiveDeckV71==="function")window.getActiveDeckV71();updateUser();showScreen("menu")}
+function logout(){setUser("");showScreen("auth")}
 function stopMatch(){clearTimeout(matchTimer);matchTimer=null;if($("startMatchButtonV68"))$("startMatchButtonV68").style.display="inline-block";if($("cancelMatchButtonV68"))$("cancelMatchButtonV68").style.display="none"}
 function beginMatch(){stopMatch();$("matchStatusV68").textContent="正在匹配…";$("matchDescriptionV68").textContent="正在寻找对手，测试版将匹配 AI。";$("startMatchButtonV68").style.display="none";$("cancelMatchButtonV68").style.display="inline-block";matchTimer=setTimeout(()=>{$("matchStatusV68").textContent="匹配成功";$("matchDescriptionV68").textContent="已找到测试 AI，即将进入对战。";setTimeout(()=>startBattle("match"),650)},1100)}
 function randomCode(){return Math.random().toString(36).slice(2,8).toUpperCase()}
@@ -24582,7 +24577,9 @@ function renderDeckList(){const list=$("currentDeckListV68");if(!list)return;lis
 function loadDeck(){try{currentDeck=JSON.parse(localStorage.getItem(DECK_KEY)||"[]")||[]}catch(e){currentDeck=[]}renderDeck()}
 function saveDeck(){try{localStorage.setItem(DECK_KEY,JSON.stringify(currentDeck))}catch(e){}}
 function bind(){
-$("authLoginTabV68").onclick=()=>authTab("login");$("authRegisterTabV68").onclick=()=>authTab("register");$("loginFormV68").onsubmit=login;$("registerFormV68").onsubmit=register;$("logoutButtonV68").onclick=logout;
+// Remove obsolete local plaintext credentials; guest nicknames need no password.
+try{localStorage.removeItem(ACCOUNT_KEY)}catch(e){}
+$("loginFormV68").onsubmit=login;$("logoutButtonV68").onclick=logout;
 $("menuMatchV68").onclick=window.showMatchLobby;$("menuCustomV68").onclick=()=>showScreen("custom");$("menuDeckV68").onclick=()=>{loadDeck();showScreen("deck")};$("menuReplayV68").onclick=()=>{if(typeof openReplayPickerV66==="function")openReplayPickerV66()};
 document.querySelectorAll("[data-back-menu]").forEach(b=>b.onclick=window.showMainMenuV68);
 $("startMatchButtonV68").onclick=beginMatch;$("cancelMatchButtonV68").onclick=()=>{stopMatch();$("matchStatusV68").textContent="准备匹配";$("matchDescriptionV68").textContent="当前测试版将匹配到 AI 对手。"};
@@ -25026,6 +25023,12 @@ if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",
 
         state.collection=
             normalizeCollection(raw);
+        window.RhodesStarterDecks.ensure(
+            state.collection,
+            window.rhodesCardDataV87.starterDecks,
+            getMainPool(),
+            getBasePool()
+        );
 
         if(
             !state.selectedDeckId ||
@@ -26265,6 +26268,7 @@ if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",
     window.getActiveDeckV71=
         function(){
             loadCollection();
+            saveCollection();
 
             const deck=activeDeck();
 
@@ -26332,10 +26336,7 @@ if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",
                     $("customStartBattleV68");
 
                 if(startButton){
-                    customRoom.insertBefore(
-                        tag,
-                        startButton
-                    );
+                    startButton.parentNode.insertBefore(tag, startButton);
                 }
             }
 
@@ -28496,6 +28497,7 @@ if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",
             return;
         }
 
+        send("hello",{name:username()});
         send(
             "create_room",
             {
@@ -28530,6 +28532,7 @@ if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",
             return;
         }
 
+        send("hello",{name:username()});
         send(
             "join_room",
             {
@@ -28864,6 +28867,7 @@ if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",
 
             case "game_resumed":
                 console.log("v94 已恢复服务器对局",message.gameId);
+                if(typeof window.startBattleFromMenuV68==="function") window.startBattleFromMenuV68("custom");
                 break;
             case "game_state":
                 if(typeof window.handleGameStateV94==="function") window.handleGameStateV94(message);
@@ -33387,10 +33391,10 @@ body.v96-battle-active.v94-pvp-active #v97SurrenderButton{
             const attackerEl=v98FieldElement(attackerSide,Number(action.attackerSlotIndex));
             if(attackerEl && typeof playAttackAnimation==="function"){
                 const attacker={side:attackerSide,cardElement:attackerEl,cardData:mainCard(action.attackerCardId)};
-                let target={type:"player"};
+                let target={type:"player",attackMode:action.attackMode || "melee"};
                 if(action.type==="attack_operator"){
                     const targetEl=v98FieldElement(defenderSide,Number(action.targetSlotIndex));
-                    if(targetEl) target={type:"operator",cardElement:targetEl,cardData:mainCard(action.targetCardId)};
+                    if(targetEl) target={type:"operator",cardElement:targetEl,cardData:mainCard(action.targetCardId),attackMode:action.attackMode || "melee"};
                 }
                 try{ await playAttackAnimation(attacker,target); }catch(error){ console.error("v98攻击动画失败",error); }
             }
@@ -33597,6 +33601,12 @@ body.v96-battle-active.v94-pvp-active #v97SurrenderButton{
     }
 
     function syncAllVisualState(message){
+        playerGrave.length=0;
+        (message.self.grave || []).forEach(id=>playerGrave.push(mainCard(id)));
+        enemyGrave.length=0;
+        (message.opponent.grave || []).forEach(id=>enemyGrave.push(mainCard(id)));
+        showPlayerGrave();
+        showEnemyGrave();
         handSync(message.self.hand || []);
         enemyHandSync(message.opponent.handCount);
         counts(message);
@@ -33741,6 +33751,7 @@ body.v96-battle-active.v94-pvp-active #v97SurrenderButton{
         }
         st.pending=false;
         syncAllVisualState(message);
+        if(window.renderOnlineEffects) window.renderOnlineEffects(message);
         v97PulseChangedBase(message,previous);
         recordState(message);
 
@@ -33802,6 +33813,9 @@ body.v96-battle-active.v94-pvp-active #v97SurrenderButton{
             return false;
         }
 
+        if(st.initializedGameId===String(start.gameId || "")) return true;
+        st.initializedGameId=String(start.gameId || "");
+        st.initializing=true;
         st.active=true;
         st.opening=start;
         st.gameId=String(start.gameId || "");
@@ -33872,6 +33886,7 @@ body.v96-battle-active.v94-pvp-active #v97SurrenderButton{
         }
 
         status("v98 服务器同步：等待双方调度","waiting");
+        st.initializing=false;
 
         if(window.__pendingGameStateV94){
             const pending=window.__pendingGameStateV94;
@@ -33886,6 +33901,7 @@ body.v96-battle-active.v94-pvp-active #v97SurrenderButton{
     window.initializeServerPvpBattleV94=init;
     window.handleGameStateV94=function(message){
         if(
+            st.initializing ||
             typeof battleInitializedV69!=="undefined" &&
             !battleInitializedV69
         ){
@@ -33903,10 +33919,8 @@ body.v96-battle-active.v94-pvp-active #v97SurrenderButton{
             turnUi(st.server);
             status(note(st.server),"waiting");
         }
-        alert(
-            message && message.message ||
-            "联机操作失败。"
-        );
+        if(window.onlineEffectsEnabled && window.onlineEffectsError) window.onlineEffectsError(message);
+        else alert(message && message.message || "联机操作失败。");
     };
 
     // 兼容旧初始化入口，防止历史代码在v94页面里误判。
@@ -33962,7 +33976,7 @@ body.v96-battle-active.v94-pvp-active #v97SurrenderButton{
     document.addEventListener(
         "click",
         function(event){
-            if(!st.active){
+            if(!st.active || window.onlineEffectsEnabled){
                 return;
             }
 
@@ -34031,7 +34045,7 @@ body.v96-battle-active.v94-pvp-active #v97SurrenderButton{
     document.addEventListener(
         "click",
         function(event){
-            if(!st.active){
+            if(!st.active || window.onlineEffectsEnabled){
                 return;
             }
 
@@ -34072,7 +34086,7 @@ body.v96-battle-active.v94-pvp-active #v97SurrenderButton{
     document.addEventListener(
         "click",
         function(event){
-            if(!st.active){
+            if(!st.active || window.onlineEffectsEnabled){
                 return;
             }
 
@@ -34106,7 +34120,7 @@ body.v96-battle-active.v94-pvp-active #v97SurrenderButton{
     document.addEventListener(
         "click",
         function(event){
-            if(!st.active){
+            if(!st.active || window.onlineEffectsEnabled){
                 return;
             }
 
@@ -34161,7 +34175,7 @@ body.v96-battle-active.v94-pvp-active #v97SurrenderButton{
     document.addEventListener(
         "click",
         function(event){
-            if(!st.active){
+            if(!st.active || window.onlineEffectsEnabled){
                 return;
             }
 
@@ -34194,7 +34208,7 @@ body.v96-battle-active.v94-pvp-active #v97SurrenderButton{
     document.addEventListener(
         "click",
         function(event){
-            if(!st.active || !selectingAttackTarget || v96AttackSlotIndex<0){
+            if(window.onlineEffectsEnabled || !st.active || !selectingAttackTarget || v96AttackSlotIndex<0){
                 return;
             }
 
@@ -34241,7 +34255,7 @@ body.v96-battle-active.v94-pvp-active #v97SurrenderButton{
     document.addEventListener(
         "click",
         function(event){
-            if(!st.active || !selectingAttackTarget || v96AttackSlotIndex<0){
+            if(window.onlineEffectsEnabled || !st.active || !selectingAttackTarget || v96AttackSlotIndex<0){
                 return;
             }
 
@@ -34351,6 +34365,7 @@ body.v96-battle-active.v94-pvp-active #v97SurrenderButton{
 </script>
 
 
+<script src="/online-effects.js"></script>
 </body>
 
 </html>

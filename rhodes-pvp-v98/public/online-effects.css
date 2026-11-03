@@ -1,0 +1,15 @@
+#onlineToolbar{position:fixed;right:16px;bottom:18px;z-index:100050;display:flex;gap:8px;align-items:center;background:#172531;padding:8px;border:1px solid #619a8a;border-radius:9px;color:#fff;font:14px sans-serif;max-width:90vw}
+#onlineToolbar button,.online-dialog button{background:#284b5e;color:#fff;border:1px solid #7a9ead;border-radius:7px;padding:10px;cursor:pointer;font:inherit}
+#onlineToolbar button:disabled,.online-dialog button:disabled{opacity:.45;cursor:default}
+.online-overlay{position:fixed;inset:0;background:#000a;z-index:200050;display:flex;align-items:center;justify-content:center;padding:14px;box-sizing:border-box}
+.online-dialog{width:min(820px,96vw);max-height:88vh;overflow:auto;background:#15232e;color:#f0f6fa;border:1px solid #729f9d;border-radius:12px;padding:20px;box-sizing:border-box;font:15px/1.5 sans-serif;box-shadow:0 10px 60px #0008}
+.online-dialog h2{margin:0 0 8px;font-size:22px}.online-dialog p{color:#c7d9dd;white-space:pre-wrap}
+.online-options{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:9px;margin:12px 0}
+.online-options button{text-align:left;white-space:pre-wrap;min-height:62px}.online-options button.chosen{outline:3px solid #7ee1b4;background:#255344}
+.online-options button small{display:block;margin-top:6px;font-size:12px;line-height:1.4;color:#d6e3e8}
+.online-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}.online-error{color:#ffb4a9;min-height:20px}.online-log{max-height:160px;overflow:auto;background:#0c1720;padding:10px;font-size:13px;white-space:pre-wrap}
+.online-power{position:absolute;right:1px;bottom:1px;background:#14282f;color:#adffcf;border-radius:4px;padding:2px 5px;font:bold 13px sans-serif;z-index:3;pointer-events:none}
+.online-trap{display:flex;align-items:center;justify-content:center;text-align:center;background:repeating-linear-gradient(45deg,#213646,#213646 8px,#2b4657 8px,#2b4657 16px)!important;border:2px solid #81a0ad!important;color:#fff}
+#onlineEffectNotice{position:fixed;left:50%;top:12px;transform:translateX(-50%);z-index:200060;max-width:min(650px,92vw);box-sizing:border-box;padding:12px 16px;background:#213b46;color:#eef9f7;border:1px solid #80b4ad;border-radius:8px;font:14px/1.5 sans-serif;white-space:pre-wrap;box-shadow:0 4px 22px #0008}
+#onlineEffectNotice button{margin-left:12px;border:1px solid #80b4ad;border-radius:5px;background:#2c5360;color:white;padding:5px 8px;cursor:pointer}
+@media(max-width:600px){.online-dialog{padding:12px}.online-options{grid-template-columns:1fr 1fr}.online-options button{font-size:13px;padding:8px}#onlineToolbar{font-size:12px;bottom:6px;right:6px}}

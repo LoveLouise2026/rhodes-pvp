@@ -6,12 +6,18 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "check": "node --check server.js",
+    "cards": "node tools/card-manager.js",
+    "check": "node --check server.js && node tools/check-client.js",
     "validate:cards": "node tools/validate-card-data.js",
-    "test:v98": "node tools/test-v98.js"
+    "test:v98": "node tools/test-v98.js",
+    "test:network": "node tools/test-network.js",
+    "test:starters": "node tools/test-starter-decks.js",
+    "test:effects": "node tools/test-effects.js",
+    "test:manager": "node tools/test-card-manager.js",
+    "test": "npm run check && npm run validate:cards && npm run test:starters && npm run test:v98 && npm run test:effects && npm run test:manager && npm run test:network"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=24"
   },
   "dependencies": {
     "ws": "^8.18.0"

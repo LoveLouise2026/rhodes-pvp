@@ -1,0 +1,23 @@
+[Unit]
+Description=NTCG web card game
+After=network.target
+
+[Service]
+Type=simple
+# Replace with an existing unprivileged account and absolute source path.
+User=ntcg
+WorkingDirectory=/opt/ntcg/rhodes-pvp-v98
+ExecStart=/usr/bin/node server.js
+Environment=NODE_ENV=production
+Environment=HOST=0.0.0.0
+Environment=PORT=3000
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=10
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+
+[Install]
+WantedBy=multi-user.target
