@@ -25,6 +25,26 @@ function settle(f) {
 }
 function deploy(f,id,slot=0){f.a.hand.push(id);act(f,'deploy_operator',{cardId:id,slotIndex:slot});}
 function tactic(f,id){f.a.hand.push(id);act(f,'use_tactic',{cardId:id});}
+test('choice targets map physical hand copies and board slots without exposing continuation or opponent choices',()=>{
+ const f=fixture();f.a.hand=['SD01-0001','SD01-0001'];deploy(f,'SD01-0003');
+ const view=rules.view(f.g,'A').pendingChoice;
+ assert.deepEqual(view.options.map(o=>o.target),[{zone:'hand',owner:'A',index:0},{zone:'hand',owner:'A',index:1}]);
+ assert(!('next' in view));assert(view.options.every(o=>!('value' in o)));assert.deepEqual(rules.view(f.g,'B').pendingChoice,{owner:'A',waiting:true});
+ view.options[0].target.index=99;assert.equal(f.g.pendingChoice.options[0].target.index,0,'projection must not share mutable targets');
+ choose(f,o=>o.value===1);const slots=rules.view(f.g,'A').pendingChoice.options;
+ assert.deepEqual(slots.find(o=>o.target.index===4).target,{zone:'slot',owner:'A',index:4});
+ choose(f,o=>o.value===4);assert.equal(f.a.field[4],'SD01-0001');assert.equal(f.g.pendingChoice.title,'夜刀');settle(f);
+ const h=fixture();field(h,h.a,0,'SD02-0005');field(h,h.b,4,'SD02-0001');h.a.hand=['SD02-0005'];
+ act(h,'deploy_operator',{cardId:'SD02-0005',slotIndex:4});
+ assert.deepEqual(rules.view(h.g,'A').pendingChoice.options[0].target,{zone:'field',owner:'B',index:4});
+});
+test('base cost presents exact allowed counts; public peek cards have no hand or deck positions',()=>{
+ const f=fixture();f.a.activeBase='SD01-0016';f.a.baseStack=['SD01-0016'];f.a.baseDeck=['SD01-0017'];f.a.hand=['SD01-0001','SD01-0002'];
+ rules.beginTurn(f.g,'A');assert.deepEqual(rules.view(f.g,'A').pendingChoice.allowedCounts,[0,2]);
+ const before=JSON.stringify(f.g);assert.throws(()=>act(f,'resolve_choice',{choiceId:f.g.pendingChoice.id,optionIds:['0']}),rules.RuleError);assert.equal(JSON.stringify(f.g),before);
+ const h=fixture();h.a.deck=['SD01-0001','SD01-0002'];tactic(h,'SD01-0011');
+ assert(rules.view(h.g,'A').pendingChoice.options.every(o=>!o.target));assert(!rules.view(h.g,'B').pendingChoice.options);
+});
 test('夜刀 reveal/draw; illegal and foreign choices leave state unchanged',()=>{
  const f=fixture();f.a.hand=['SD01-0002'];deploy(f,'SD01-0001');const c=f.g.pendingChoice;
  const serialized=JSON.stringify(f.g);assert.throws(()=>act(f,'resolve_choice',{choiceId:c.id,optionIds:['0']},'B'),rules.RuleError);assert.equal(JSON.stringify(f.g),serialized);

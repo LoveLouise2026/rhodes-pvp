@@ -32,18 +32,18 @@ module.exports = function createRules(mainCards, baseCards) {
   }
   function push(g, ...tasks) { g.queue.unshift(...tasks.filter(Boolean)); }
   function effect(owner, id, extra = {}) { return { type: 'effect', owner, cardId: id, stage: 0, ...extra }; }
-  function option(value, label, cardId) { return { value, label, ...(cardId ? { cardId } : {}) }; }
+  function option(value, label, cardId, target) { return { value, label, ...(cardId ? { cardId } : {}), ...(target ? { target } : {}) }; }
   function handOptions(p, predicate = () => true) {
-    return p.hand.flatMap((id, index) => predicate(id) ? [option(index, `手牌 ${index + 1} · ${card(id).name} Lv.${card(id).level}`, id)] : []);
+    return p.hand.flatMap((id, index) => predicate(id) ? [option(index, `手牌 ${index + 1} · ${card(id).name} Lv.${card(id).level}`, id, { zone: 'hand', owner: p.id, index })] : []);
   }
   function graveOptions(p, predicate) {
-    return p.grave.flatMap((id, index) => predicate(id) ? [option(index, `弃牌区 · ${card(id).name} Lv.${card(id).level}`, id)] : []);
+    return p.grave.flatMap((id, index) => predicate(id) ? [option(index, `弃牌区 · ${card(id).name} Lv.${card(id).level}`, id, { zone: 'grave', owner: p.id, index })] : []);
   }
   function fieldOptions(g, p, predicate = () => true) {
-    return p.field.flatMap((id, s) => id && predicate(id, s) ? [option(ref(p, s), `${p.name} ${s < 4 ? '前' : '后'}排${column(s) + 1} · ${card(id).name} ATK ${power(g, p, s)}`, id)] : []);
+    return p.field.flatMap((id, s) => id && predicate(id, s) ? [option(ref(p, s), `${p.name} ${s < 4 ? '前' : '后'}排${column(s) + 1} · ${card(id).name} ATK ${power(g, p, s)}`, id, { zone: 'field', owner: p.id, index: s })] : []);
   }
   function empty(p, predicate = () => true) {
-    return p.field.flatMap((id, s) => !id && !p.traps[s] && predicate(s) ? [option(s, `${s < 4 ? '前' : '后'}排 · 第${column(s) + 1}战线`)] : []);
+    return p.field.flatMap((id, s) => !id && !p.traps[s] && predicate(s) ? [option(s, `${s < 4 ? '前' : '后'}排 · 第${column(s) + 1}战线`, null, { zone: 'slot', owner: p.id, index: s })] : []);
   }
   function ask(g, t, stage, options, config = {}) {
     if (!options.length) return false;
@@ -53,7 +53,7 @@ module.exports = function createRules(mainCards, baseCards) {
       id: `${g.id}:choice:${++g.choiceSequence}`, owner: t.owner,
       title: config.title || card(t.cardId)?.name || '效果结算',
       hint: config.hint || (config.ordered ? '依次点击，按点击顺序结算。' : '请选择；不发动时可选择跳过。'),
-      min, max, ordered: Boolean(config.ordered),
+      min, max, ordered: Boolean(config.ordered), allowedCounts: config.allowedCounts,
       options: options.map((o, i) => ({ ...o, id: String(i) })),
       next: { ...t, stage }
     };
@@ -167,7 +167,7 @@ module.exports = function createRules(mainCards, baseCards) {
       if (id === 'SD01-0014' && !p.field.some(c => card(c)?.name === '煌')) return [];
       if (id === 'SD02-0014' && !p.field.some(c => card(c)?.name === '陈')) return [];
       if (id === 'SD01-0015' && (!empty(p).length || !p.field.some((c, i) => c && column(i) === column(s) && p.hand.some(h => isOperator(h) && card(h).level === card(c).level)))) return [];
-      return [option(s, `发动后排第${column(s) + 1}战线【${card(id).name}】`, id)];
+      return [option(s, `发动后排第${column(s) + 1}战线【${card(id).name}】`, id, { zone: 'trap', owner: p.id, index: s })];
     });
   }
 
@@ -311,7 +311,7 @@ module.exports = function createRules(mainCards, baseCards) {
         return;
       }
       case 'SD01-0016': case 'SD02-0015':
-        if (!stage && level(p) === 1 && p.hand.length >= 2) return choose(1, handOptions(p), { min: 0, max: 2, title: 'Lv1基地：选择2张手牌升级，或跳过' });
+        if (!stage && level(p) === 1 && p.hand.length >= 2) return choose(1, handOptions(p), { min: 0, max: 2, allowedCounts: [0, 2], title: 'Lv1基地：选择2张手牌升级，或跳过' });
         if (stage === 1 && picks.length) { check(picks.length === 2, '必须选择2张费用牌或跳过。'); discard(p, picks); upgrade(g, p); } return;
       case 'SD01-0017': case 'SD02-0016':
         if (!used(p, id, g)) { p.once[id] = g.turnSequence; draw(g, p, 1); } return;
@@ -491,7 +491,7 @@ module.exports = function createRules(mainCards, baseCards) {
     ensure(g);
     const c = g.pendingChoice;
     return {
-      pendingChoice: c ? c.owner === owner ? { id: c.id, owner: c.owner, title: c.title, hint: c.hint, min: c.min, max: c.max, ordered: c.ordered, options: c.options.map(({ id, label, cardId }) => ({ id, label, cardId })) } : { owner: c.owner, waiting: true } : null,
+      pendingChoice: c ? c.owner === owner ? { id: c.id, owner: c.owner, title: c.title, hint: c.hint, min: c.min, max: c.max, ordered: c.ordered, allowedCounts: c.allowedCounts, options: c.options.map(({ id, label, cardId, target }) => ({ id, label, cardId, ...(target ? { target: { ...target } } : {}) })) } : { owner: c.owner, waiting: true } : null,
       legalActions: legalActions(g, owner),
       effectLog: g.effectLog.filter(e => !e.audience || e.audience === owner).slice(-60).map(({ audience, ...e }) => e),
       players: g.players.map(p => ({ id: p.id, powers: p.field.map((id, s) => id ? power(g, p, s) : null), meta: p.fieldMeta.map(m => m ? { uid: m.uid, stack: m.stack.slice(), entered: m.entered, attacks: m.attackTurn === g.turnSequence ? m.attacks : 0, protected: m.protectedTurn === g.turnSequence } : null), traps: p.traps.map(t => t ? p.id === owner ? { cardId: t.cardId, setTurn: t.setTurn } : { hidden: true } : null) }))
