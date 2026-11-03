@@ -12,6 +12,7 @@ function readJson(name) {
 const mainCards = readJson("cards.json");
 const baseCards = readJson("base-cards.json");
 const cards = [...mainCards, ...baseCards];
+require('../public/starter-decks').validate(readJson('starter-decks.json'), mainCards, baseCards);
 const ids = new Set();
 const errors = [];
 

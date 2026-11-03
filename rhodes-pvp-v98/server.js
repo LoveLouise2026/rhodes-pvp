@@ -19,6 +19,8 @@ function loadCardData() {
   const mainCards = readJsonFile("cards.json");
   const baseCards = readJsonFile("base-cards.json");
   const versionInfo = readJsonFile("card-pool-version.json");
+  const starterDecks = readJsonFile("starter-decks.json");
+  require("./public/starter-decks").validate(starterDecks, mainCards, baseCards);
   const ids = new Set();
 
   for (const card of [...mainCards, ...baseCards]) {
@@ -36,13 +38,18 @@ function loadCardData() {
   return {
     version: versionInfo.version,
     mainCards,
-    baseCards
+    baseCards,
+    starterDecks
   };
 }
 
 function reloadCardData() {
-  return loadCardData();
+  return CARD_DATA;
 }
+
+// Pin the card pool for the lifetime of this process and validate before listening.
+const CARD_DATA = loadCardData();
+const rules = require("./engine/rules")(CARD_DATA.mainCards, CARD_DATA.baseCards);
 
 const clients = new Map();
 const rooms = new Map();
@@ -278,6 +285,7 @@ function joinRoom(ws, message) {
 function setReady(ws, message) {
   const ctx = requireRoom(ws);
   if (!ctx) return;
+  if (ctx.room.rps) return send(ws, { type: "error", message: "猜拳期间不能更改准备状态。" });
 
   const player = ctx.room.players.find((p) => p.id === ctx.client.id);
   if (!player) return;
@@ -311,6 +319,7 @@ function validateDeckPayload(payload) {
       errors.push(`主卡组包含服务器无法识别的卡牌：${id}`);
       continue;
     }
+    if (mainById.get(id).onlineStatus === 'pending') errors.push(`卡牌 ${id} 的效果待接入，暂不能用于联机。`);
     counts.set(id, (counts.get(id) || 0) + 1);
   }
   for (const [id, count] of counts) {
@@ -324,6 +333,7 @@ function validateDeckPayload(payload) {
       errors.push(`基地卡组包含服务器无法识别的卡牌：${id}`);
       continue;
     }
+    if (card.onlineStatus === 'pending') errors.push(`基地 ${id} 的效果待接入，暂不能用于联机。`);
     const level = Number(card.level);
     if (levelCounts.has(level)) levelCounts.set(level, levelCounts.get(level) + 1);
   }
@@ -342,6 +352,7 @@ function validateDeckPayload(payload) {
 function setDeck(ws, message) {
   const ctx = requireRoom(ws);
   if (!ctx) return;
+  if (ctx.room.rps) return send(ws, { type: "error", message: "猜拳期间不能更改卡组。" });
 
   const player = ctx.room.players.find((p) => p.id === ctx.client.id);
   if (!player) return;
@@ -433,6 +444,7 @@ function createAuthoritativeGame(room, firstPlayerId) {
     })
   };
   games.set(gameId, game);
+  room.activeGameId = gameId;
 
   for (const player of room.players) {
     const self = game.players.find((p) => p.id === player.id);
@@ -528,14 +540,27 @@ function gameStateForV94(game, recipientId) {
       activeBase: opponent.activeBase,
       baseLifeCount: opponent.baseLife.length,
       graveCount: opponent.grave.length,
+      grave: opponent.grave.slice(),
       field: opponent.field.slice(),
       fieldEnteredTurn: opponent.fieldEnteredTurn.slice(),
       fieldAttackedTurn: opponent.fieldAttackedTurn.slice(),
       mulliganDone: opponent.mulliganDone
     },
-    lastAction: game.lastAction,
-    events: (game.events || []).slice(-8)
+    rulesVersion: "effects-v1",
+    rules: rules.view(game, recipientId),
+    lastAction: eventForPlayer(game.lastAction, recipientId),
+    events: (game.events || []).slice(-8).map((event) => eventForPlayer(event, recipientId))
   };
+}
+
+function eventForPlayer(event, recipientId) {
+  if (!event) return null;
+  const visible = { ...event };
+  if (event.type === "mulligan" && event.by !== recipientId) {
+    delete visible.returnedCardIds;
+    delete visible.replacementHand;
+  }
+  return visible;
 }
 
 function sendGameStateV94(game) {
@@ -567,8 +592,10 @@ function resumeGameV94(ws, message) {
     try { send(player.ws,{type:"session_replaced",message:"你的对局已在新连接恢复。"}); } catch {}
   }
   player.ws = ws;
+  player.disconnectedAt = null;
   client.gameId = game.id;
   client.gamePlayerId = player.id;
+  game.lastActivityAt = Date.now();
   send(ws, { type: "game_resumed", version:PVP_VERSION, gameId: game.id, playerId: player.id });
   const state = gameStateForV94(game, player.id);
   if (state) send(ws, state);
@@ -590,6 +617,7 @@ function requireGameV94(ws, message) {
     pvpErrorV94(ws, "对局编号不一致。");
     return null;
   }
+  game.lastActivityAt = Date.now();
   return { client, game, player };
 }
 
@@ -602,52 +630,8 @@ function drawFromDeckV94(player, count) {
   return drawn;
 }
 
-function activateFirstBaseV94(player) {
-  if (player.activeBase || !player.baseDeck.length) return null;
-  const id = player.baseDeck.shift();
-  player.baseStack.push(id);
-  player.activeBase = id;
-  return id;
-}
-
-function canOfferLv1BaseStartV94(game, player) {
-  if (!player || Number(game.startedTurns[player.id] || 0) < 2) return false;
-  const base = getBaseCardV94(player.activeBase);
-  if (!base || Number(base.level || 0) !== 1) return false;
-  if (!["SD01-0016", "SD02-0015"].includes(String(base.id || ""))) return false;
-  if (player.hand.length < 2) return false;
-  const { baseById } = cardPoolMapsV93();
-  return player.baseDeck.some((id) => Number((baseById.get(String(id)) || {}).level || 0) === 2);
-}
-
-function enterMainAfterTurnStartV94(game, player) {
-  const starts = Number(game.startedTurns[player.id] || 0);
-  let requestedDraw = 0;
-  if (!(player.id === game.firstPlayerId && starts === 1)) {
-    requestedDraw = starts === 1 ? 1 : currentBaseLevelV94(player);
-  }
-  const drawCount = drawFromDeckV94(player, requestedDraw);
-  game.phase = "main";
-  return { drawCount, requestedDraw };
-}
-
 function beginTurnV94(game, playerId) {
-  const player = getGamePlayerV94(game, playerId);
-  if (!player) return null;
-  game.currentPlayerId = playerId;
-  game.playsThisTurn = 0;
-  game.turnSequence = Number(game.turnSequence || 0) + 1;
-  const basePlaced = activateFirstBaseV94(player);
-  const starts = Number(game.startedTurns[playerId] || 0) + 1;
-  game.startedTurns[playerId] = starts;
-
-  if (canOfferLv1BaseStartV94(game, player)) {
-    game.phase = "turn_start_base";
-    return { starts, basePlaced, awaitingBaseDecision:true, drawCount:0, requestedDraw:0 };
-  }
-
-  const draw = enterMainAfterTurnStartV94(game, player);
-  return { starts, basePlaced, awaitingBaseDecision:false, ...draw };
+  return rules.beginTurn(game, playerId);
 }
 
 function finishMulligansIfReadyV94(game) {
@@ -703,250 +687,25 @@ function submitMulliganV94(ws, message) {
   finishMulligansIfReadyV94(game);
 }
 
-function deployOperatorV94(ws, message) {
+function rulesAction(ws, message) {
   const ctx = requireGameV94(ws, message);
   if (!ctx) return;
-  const { game, player } = ctx;
-  if (game.phase !== "main") return pvpErrorV94(ws, "当前不是主要阶段。");
-  if (game.currentPlayerId !== player.id) return pvpErrorV94(ws, "现在不是你的回合。");
-  const slotIndex = Number(message.slotIndex);
-  if (!Number.isInteger(slotIndex) || slotIndex < 0 || slotIndex > 7) return pvpErrorV94(ws, "部署位置不合法。");
-  if (player.field[slotIndex]) return pvpErrorV94(ws, "这个战场格已经有卡牌了。");
-  const cardId = String(message.cardId || "");
-  const handIndex = player.hand.indexOf(cardId);
-  if (handIndex < 0) return pvpErrorV94(ws, "这张牌已经不在你的手牌中。");
-  const { mainById } = cardPoolMapsV93();
-  const card = mainById.get(cardId);
-  if (!card || card.type !== "干员") return pvpErrorV94(ws, "v98 联机同步测试目前只允许普通部署干员卡。");
-  const baseLevel = currentBaseLevelV94(player);
-  if (Number(card.level || 0) > baseLevel) return pvpErrorV94(ws, `当前基地Lv${baseLevel}，不能部署Lv${card.level}干员。`);
-  const playLimit = currentBaseLevelV94(player);
-  if (game.playsThisTurn >= playLimit) return pvpErrorV94(ws, `本回合出牌次数已达到上限 ${playLimit}。`);
-  player.hand.splice(handIndex, 1);
-  player.field[slotIndex] = cardId;
-  player.fieldEnteredTurn[slotIndex] = Number(game.turnSequence || 0);
-  player.fieldAttackedTurn[slotIndex] = -1;
-  game.playsThisTurn++;
-  bumpRevision(game,{ type:"deploy_operator", by:player.id, cardId, slotIndex, at:Date.now() });
-  sendGameStateV94(game);
-}
-
-function chooseCardsFromHandV94(player, ids) {
-  const copy = player.hand.slice();
-  const removed = [];
-  for (const raw of ids) {
-    const id = String(raw || "");
-    const index = copy.indexOf(id);
-    if (index < 0) return null;
-    removed.push(copy.splice(index, 1)[0]);
+  try {
+    if (message.expectedRevision !== undefined && message.expectedRevision !== ctx.game.revision) {
+      send(ws, gameStateForV94(ctx.game, ctx.player.id));
+      return pvpErrorV94(ws, "状态已更新，请根据最新状态重新操作。");
+    }
+    const action = rules.execute(ctx.game, ctx.player.id, String(message.action || ""), message);
+    bumpRevision(ctx.game, action || { type: "effect_step", by: ctx.player.id });
+    sendGameStateV94(ctx.game);
+  } catch (error) {
+    if (!(error instanceof rules.RuleError)) console.error("Rules failure:", error);
+    pvpErrorV94(ws, error instanceof rules.RuleError ? error.message : "效果处理失败，状态未更改。");
   }
-  return { remaining:copy, removed };
 }
-
-function resolveLv1BaseDecisionV94(ws, message) {
-  const ctx = requireGameV94(ws, message);
-  if (!ctx) return;
-  const { game, player } = ctx;
-  if (game.currentPlayerId !== player.id) return pvpErrorV94(ws, "现在不是你的回合。");
-  if (game.phase !== "turn_start_base") return pvpErrorV94(ws, "当前没有等待处理的Lv1基地回合开始效果。");
-
-  const activate = Boolean(message.activate);
-  let discarded = [];
-  let upgradedBase = null;
-
-  if (activate) {
-    const ids = Array.isArray(message.cardIds) ? message.cardIds.map(String) : [];
-    if (ids.length !== 2) return pvpErrorV94(ws, "发动Lv1基地效果必须选择2张手牌作为费用。");
-    const chosen = chooseCardsFromHandV94(player, ids);
-    if (!chosen) return pvpErrorV94(ws, "选择的费用卡已经不在手牌中，请重新选择。");
-    const { baseById } = cardPoolMapsV93();
-    const lv2Index = player.baseDeck.findIndex((id) => Number((baseById.get(String(id)) || {}).level || 0) === 2);
-    if (lv2Index < 0) return pvpErrorV94(ws, "基地卡组中没有可升级的Lv2基地。");
-
-    player.hand = chosen.remaining;
-    discarded = chosen.removed;
-    player.grave.push(...discarded);
-    upgradedBase = player.baseDeck.splice(lv2Index, 1)[0];
-    player.baseStack.push(upgradedBase);
-    player.activeBase = upgradedBase;
-  }
-
-  const draw = enterMainAfterTurnStartV94(game, player);
-  bumpRevision(game, {
-    type:"base_lv1_decision",
-    by:player.id,
-    activate,
-    discarded:discarded.slice(),
-    upgradedBase,
-    drawCount:draw.drawCount,
-    requestedDraw:draw.requestedDraw,
-    at:Date.now()
-  });
-  sendGameStateV94(game);
-}
-
-function endTurnV94(ws, message) {
-  const ctx = requireGameV94(ws, message);
-  if (!ctx) return;
-  const { game, player } = ctx;
-  if (game.phase !== "main") return pvpErrorV94(ws, "当前不能结束回合。");
-  if (game.currentPlayerId !== player.id) return pvpErrorV94(ws, "现在不是你的回合。");
-  const nextId = game.players.find((p) => p.id !== player.id).id;
-  if (player.id === game.secondPlayerId) game.round++;
-  const turnStart = beginTurnV94(game, nextId);
-  bumpRevision(game, {
-    type:"end_turn",
-    by:player.id,
-    nextPlayerId:nextId,
-    turnStart,
-    at:Date.now()
-  });
-  sendGameStateV94(game);
-}
-
-
-function sameColumnV96(a, b) {
-  return Number(a) % 4 === Number(b) % 4;
-}
-
-function operatorAttackValueV96(card) {
-  return Number(card && card.attack || 0);
-}
-
-function legalOperatorTargetsV96(attackerCard, opponent) {
-  const result = [];
-  for (let i = 0; i < 8; i++) {
-    if (opponent.field[i]) result.push(i);
-  }
-  return result;
-}
-
-function validateAttackTargetV96(attackerSlotIndex, targetSlotIndex, attackerCard, opponent) {
-  if (!sameColumnV96(attackerSlotIndex, targetSlotIndex)) return false;
-
-  const sameLine = legalOperatorTargetsV96(attackerCard, opponent)
-    .filter((i) => sameColumnV96(attackerSlotIndex, i));
-
-  if (!sameLine.length) return false;
-
-  const { mainById } = cardPoolMapsV93();
-  const forced = sameLine.filter((i) => {
-    const card = mainById.get(String(opponent.field[i] || ""));
-    if (!card) return false;
-    if (card.forceAttackTarget === true) return true;
-    return card.forceAttackTargetWhenFront === true && i < 4;
-  });
-  if (forced.length) return forced.includes(targetSlotIndex);
-
-  if (String(attackerCard.attackRange || "近战") === "远程" || attackerCard.canAttackAsRanged === true) {
-    return sameLine.includes(targetSlotIndex);
-  }
-
-  const front = sameLine.filter((i) => i < 4);
-  const legal = front.length ? front : sameLine;
-  return legal.includes(targetSlotIndex);
-}
-
-function clearFieldSlotV96(player, index) {
-  const cardId = player.field[index];
-  if (cardId) player.grave.push(cardId);
-  player.field[index] = null;
-  player.fieldEnteredTurn[index] = -1;
-  player.fieldAttackedTurn[index] = -1;
-}
-
-function attackOperatorV96(ws, message) {
-  const ctx = requireGameV94(ws, message);
-  if (!ctx) return;
-  const { game, player } = ctx;
-  if (game.phase !== "main") return pvpErrorV94(ws, "当前不是主要阶段。");
-  if (game.currentPlayerId !== player.id) return pvpErrorV94(ws, "现在不是你的回合。");
-
-  const opponent = game.players.find((p) => p.id !== player.id);
-  const a = Number(message.attackerSlotIndex);
-  const t = Number(message.targetSlotIndex);
-  if (![a,t].every(Number.isInteger) || a < 0 || a > 7 || t < 0 || t > 7) return pvpErrorV94(ws, "攻击位置不合法。");
-  const attackerId = player.field[a];
-  const targetId = opponent.field[t];
-  if (!attackerId) return pvpErrorV94(ws, "攻击者已经不在战场上。");
-  if (!targetId) return pvpErrorV94(ws, "目标已经不在战场上。");
-  if (player.fieldEnteredTurn[a] === game.turnSequence) return pvpErrorV94(ws, "该干员本回合刚部署，不能攻击。");
-  if (player.fieldAttackedTurn[a] === game.turnSequence) return pvpErrorV94(ws, "该干员本回合已经攻击过。");
-
-  const { mainById } = cardPoolMapsV93();
-  const attacker = mainById.get(String(attackerId));
-  const target = mainById.get(String(targetId));
-  if (!attacker || attacker.type !== "干员" || !target || target.type !== "干员") return pvpErrorV94(ws, "攻击双方必须是干员。");
-  if (attacker.cannotAttack === true) return pvpErrorV94(ws, "该干员不能攻击。");
-  if (!validateAttackTargetV96(a,t,attacker,opponent)) return pvpErrorV94(ws, "这个目标不符合当前战线的攻击规则。");
-
-  player.fieldAttackedTurn[a] = game.turnSequence;
-  const atk = operatorAttackValueV96(attacker);
-  const def = operatorAttackValueV96(target);
-  let result = "draw";
-  if (atk > def) {
-    clearFieldSlotV96(opponent,t);
-    result = "attacker_win";
-  } else if (atk < def) {
-    clearFieldSlotV96(player,a);
-    result = "defender_win";
-  } else {
-    clearFieldSlotV96(player,a);
-    clearFieldSlotV96(opponent,t);
-  }
-
-  bumpRevision(game, {
-    type:"attack_operator", by:player.id,
-    attackerSlotIndex:a, targetSlotIndex:t,
-    attackerCardId:attackerId, targetCardId:targetId,
-    attackerAttack:atk, targetAttack:def, result, at:Date.now()
-  });
-  sendGameStateV94(game);
-}
-
-function attackPlayerV96(ws, message) {
-  const ctx = requireGameV94(ws, message);
-  if (!ctx) return;
-  const { game, player } = ctx;
-  if (game.phase !== "main") return pvpErrorV94(ws, "当前不是主要阶段。");
-  if (game.currentPlayerId !== player.id) return pvpErrorV94(ws, "现在不是你的回合。");
-  const opponent = game.players.find((p) => p.id !== player.id);
-  const a = Number(message.attackerSlotIndex);
-  if (!Number.isInteger(a) || a < 0 || a > 7) return pvpErrorV94(ws, "攻击位置不合法。");
-  const attackerId = player.field[a];
-  if (!attackerId) return pvpErrorV94(ws, "攻击者已经不在战场上。");
-  if (player.fieldEnteredTurn[a] === game.turnSequence) return pvpErrorV94(ws, "该干员本回合刚部署，不能攻击。");
-  if (player.fieldAttackedTurn[a] === game.turnSequence) return pvpErrorV94(ws, "该干员本回合已经攻击过。");
-  const { mainById } = cardPoolMapsV93();
-  const attacker = mainById.get(String(attackerId));
-  if (!attacker || attacker.type !== "干员") return pvpErrorV94(ws, "攻击者必须是干员。");
-  if (attacker.cannotAttack === true) return pvpErrorV94(ws, "该干员不能攻击。");
-  const sameLine = opponent.field.some((id,index) => id && sameColumnV96(a,index));
-  if (sameLine) return pvpErrorV94(ws, "同战线仍有敌方干员，不能直接攻击玩家。");
-
-  player.fieldAttackedTurn[a] = game.turnSequence;
-  if (opponent.baseLife.length === 0) {
-    game.ended = true; game.phase = "ended"; game.winnerId = player.id; game.loserId = opponent.id;
-    game.endReason = `${opponent.name}基地生命已为0，再次受到直接攻击，${player.name}获胜。`;
-    bumpRevision(game,{type:"game_end",by:player.id,winnerId:player.id,loserId:opponent.id,reason:game.endReason,attackerSlotIndex:a,attackerCardId:attackerId,at:Date.now()});
-    sendGameStateV94(game); return;
-  }
-
-  const revealed = opponent.baseLife.pop();
-  const revealedCard = mainById.get(String(revealed || ""));
-  let lifeBattle = null;
-  if (revealedCard && revealedCard.type === "干员") {
-    const atk = operatorAttackValueV96(attacker);
-    const def = operatorAttackValueV96(revealedCard);
-    lifeBattle = { cardId: revealed, attackerAttack: atk, defenderAttack: def, result: atk>def?"attacker_win":atk<def?"defender_win":"draw" };
-    if (atk < def) clearFieldSlotV96(player,a);
-    else if (atk === def) clearFieldSlotV96(player,a);
-  }
-  opponent.grave.push(revealed);
-  bumpRevision(game,{type:"base_life_reveal",by:player.id,attackerSlotIndex:a,attackerCardId:attackerId,revealedBaseLife:revealed,remainingBaseLife:opponent.baseLife.length,lifeBattle,at:Date.now()});
-  sendGameStateV94(game);
-}
-
+function deployOperatorV94(ws, message) { rulesAction(ws, { ...message, action: "deploy_operator" }); }
+function attackOperatorV96(ws, message) { rulesAction(ws, { ...message, action: "attack_operator" }); }
+function attackPlayerV96(ws, message) { rulesAction(ws, { ...message, action: "attack_player" }); }
 
 function surrenderV97(ws, message) {
   const ctx = requireGameV94(ws, message);
@@ -962,6 +721,7 @@ function surrenderV97(ws, message) {
     return pvpErrorV94(ws, "无法找到对手，暂时不能结算投降。");
   }
 
+  game.queue = []; game.pendingChoice = null; game.attackContext = null;
   game.ended = true;
   game.phase = "ended";
   game.winnerId = opponent.id;
@@ -980,29 +740,19 @@ function surrenderV97(ws, message) {
 }
 
 function gameActionV94(ws, message) {
-  const action = String(message.action || "");
-
-  if (action === "surrender") return surrenderV97(ws, message);
-
-  // 除投降外，已结束对局不再接受任何规则动作。
-  const client = getClient(ws);
-  const game = client && games.get(String(client.gameId || ""));
-  if (game && (game.ended || game.phase === "ended")) {
-    return pvpErrorV94(ws, "本局已经结束。");
-  }
-
-  if (action === "deploy_operator") return deployOperatorV94(ws, message);
-  if (action === "attack_operator") return attackOperatorV96(ws, message);
-  if (action === "attack_player") return attackPlayerV96(ws, message);
-  if (action === "end_turn") return endTurnV94(ws, message);
-  if (action === "base_lv1_decision") return resolveLv1BaseDecisionV94(ws, message);
-  pvpErrorV94(ws, "v98 暂未开放这个联机动作。当前测试：调度、Lv1基地回合开始效果、普通干员部署、普通攻击、投降、结束回合。");
+  if (message.action === "surrender") return surrenderV97(ws, message);
+  return rulesAction(ws, message);
 }
 
 function startGame(ws) {
   const ctx = requireRoom(ws);
   if (!ctx) return;
   const { client, room } = ctx;
+
+  const activeGame = room.activeGameId && games.get(room.activeGameId);
+  if (room.rps || room.startTimer || (activeGame && !activeGame.ended)) {
+    return send(ws, { type: "error", message: "房间已在猜拳或对战中。" });
+  }
 
   if (room.hostId !== client.id) {
     send(ws, { type: "error", message: "只有房主可以开始对战。" });
@@ -1073,6 +823,11 @@ function handleMessage(ws, raw) {
 
   const client = getClient(ws);
   if (!client) return;
+
+  if (!message || typeof message !== "object" || Array.isArray(message) ||
+      typeof message.type !== "string") {
+    return send(ws, { type: "error", message: "消息必须是包含 type 的对象。" });
+  }
 
   switch (message.type) {
     case "hello":
@@ -1150,6 +905,7 @@ function mimeType(filePath) {
     ".png": "image/png",
     ".jpg": "image/jpeg",
     ".jpeg": "image/jpeg",
+    ".webp": "image/webp",
     ".svg": "image/svg+xml"
   }[ext] || "application/octet-stream";
 }
@@ -1178,7 +934,8 @@ const server = http.createServer((req, res) => {
     if (
       pathname === "/data/cards.json" ||
       pathname === "/data/base-cards.json" ||
-      pathname === "/data/card-pool-version.json"
+      pathname === "/data/card-pool-version.json" ||
+      pathname === "/data/starter-decks.json"
     ) {
       const requestedData =
         path.join(DATA_DIR, path.basename(pathname));
@@ -1211,7 +968,7 @@ const server = http.createServer((req, res) => {
     }
 
     const requested = path.normalize(path.join(PUBLIC_DIR, pathname));
-    if (!requested.startsWith(PUBLIC_DIR)) {
+    if (!requested.startsWith(PUBLIC_DIR + path.sep)) {
       res.writeHead(403);
       res.end("Forbidden");
       return;
@@ -1241,7 +998,7 @@ const server = http.createServer((req, res) => {
   }
 });
 
-const wss = new WebSocketServer({ noServer: true });
+const wss = new WebSocketServer({ noServer: true, maxPayload: 64 * 1024 });
 
 server.on("upgrade", (req, socket, head) => {
   const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
@@ -1257,6 +1014,12 @@ server.on("upgrade", (req, socket, head) => {
 });
 
 wss.on("connection", (ws) => {
+  if (clients.size >= 100) {
+    ws.close(1013, "Server full");
+    return;
+  }
+  ws.isAlive = true;
+  ws.on("pong", () => { ws.isAlive = true; });
   const client = {
     id: randomId(),
     name: "guest",
@@ -1271,11 +1034,29 @@ wss.on("connection", (ws) => {
     name: client.name
   });
 
-  ws.on("message", (raw) => {
-    handleMessage(ws, raw);
+  let windowStarted = Date.now();
+  let messageCount = 0;
+  ws.on("message", (raw, isBinary) => {
+    if (Date.now() - windowStarted >= 10000) { windowStarted = Date.now(); messageCount = 0; }
+    if (++messageCount > 80 || isBinary) {
+      ws.close(1008, "Invalid traffic");
+      return;
+    }
+    try {
+      handleMessage(ws, raw);
+    } catch (error) {
+      console.error("WebSocket request failed:", error);
+      send(ws, { type: "error", message: "操作无法处理，请刷新对局状态后重试。" });
+    }
   });
 
   ws.on("close", () => {
+    const game = games.get(client.gameId);
+    const player = getGamePlayerV94(game, client.gamePlayerId);
+    if (player && player.ws === ws) {
+      player.ws = null;
+      player.disconnectedAt = Date.now();
+    }
     removeClientFromRoom(client, "disconnect");
     clients.delete(ws);
   });
@@ -1285,7 +1066,44 @@ wss.on("connection", (ws) => {
   });
 });
 
+function cleanupGames(now = Date.now()) {
+  for (const [id, game] of games) {
+    const inactive = now - Number(game.lastActivityAt || game.createdAt || now);
+    const disconnected = game.players.every((p) => !p.ws || p.ws.readyState !== WebSocket.OPEN);
+    const retention = game.ended || disconnected ? 15 * 60 * 1000 : 6 * 60 * 60 * 1000;
+    if (inactive < retention) continue;
+    games.delete(id);
+    for (const p of game.players) {
+      const client = p.ws && getClient(p.ws);
+      if (client && client.gameId === id) {
+        client.gameId = ""; client.gamePlayerId = "";
+        send(p.ws, { type: "pvp_error", message: "对局已过期，请返回大厅重新开局。" });
+      }
+    }
+  }
+}
+
+const maintenance = setInterval(() => {
+  cleanupGames();
+  for (const ws of clients.keys()) {
+    if (!ws.isAlive) { ws.terminate(); continue; }
+    ws.isAlive = false;
+    ws.ping();
+  }
+}, 30000);
+maintenance.unref();
+
+function shutdown() {
+  clearInterval(maintenance);
+  for (const ws of clients.keys()) ws.close(1001, "Server restarting");
+  server.close(() => process.exit(0));
+  setTimeout(() => process.exit(0), 5000).unref();
+}
+process.on("SIGTERM", shutdown);
+process.on("SIGINT", shutdown);
+
 server.listen(PORT, HOST, () => {
+  console.log(`NTCG listening on ${server.address().port}`);
   console.log("");
   console.log("Rhodes PVP v98 server started");
   console.log(`Local:   http://localhost:${PORT}`);
