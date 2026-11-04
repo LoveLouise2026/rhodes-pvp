@@ -53,7 +53,7 @@
   }
   function onBoard(c) { return c.options.length > 0 && c.options.every(o => targetElement(o.target)); }
   function pick(id) {
-    const c = ownChoice(); if (!c || sending) return;
+    const c = ownChoice(); if (!c || sending || window.onlineFeedbackBusy) return;
     const o = c.options.find(o => o.id === id); if (!o) return;
     detail(definition(o.cardId));
     if (c.max === 1 && !c.ordered) return send('resolve_choice', { choiceId: c.id, optionIds: [id] });
@@ -116,8 +116,8 @@
     prompt.replaceChildren(); const text = !state.ended ? promptText() : ''; prompt.hidden = !text;
     if (text) prompt.append(element('span', text));
     const end = byId('endTurnButton');
-    if (end) { end.disabled = sending || !legal().endTurn || Boolean(state.ended); end.classList.toggle('v50-action-locked', end.disabled); }
-    if (state.ended || sending) return;
+    if (end) { end.disabled = sending || window.onlineFeedbackBusy || !legal().endTurn || Boolean(state.ended); end.classList.toggle('v50-action-locked', end.disabled); }
+    if (state.ended || sending || window.onlineFeedbackBusy) return;
     const c = ownChoice();
     if (c) {
       if (onBoard(c)) {
@@ -216,13 +216,25 @@
     sending = false; cancelSelection(); notice(message.message || '操作未完成。');
     const c = ownChoice(); if (c && !onBoard(c) && !choiceHidden) showChoiceDialog();
   };
+  window.setOnlineFeedbackBusy = function (busy) {
+    window.onlineFeedbackBusy = busy;
+    if (busy) { selection = null; hideMenus(); closeDialog(); }
+    refreshInteraction();
+    const c = ownChoice();
+    if (!busy && c && !onBoard(c) && !choiceHidden) showChoiceDialog();
+  };
+  document.addEventListener('mouseover', function (event) {
+    if (!window.onlineEffectsEnabled || !state) return;
+    const trap = event.target.closest?.('.player-zone .online-trap');
+    if (trap && !trap.contains(event.relatedTarget)) detail(trap.cardData);
+  });
   document.addEventListener('click', function (event) {
     if (!window.onlineEffectsEnabled || !state || overlay?.contains(event.target) || prompt?.contains(event.target)) return;
     const target = event.target.closest?.('#cardActionMenu button,#battleActionMenu button,#endTurnButton,#handArea .card,.player-zone .player-slot,.enemy-area .slot-group .slot,.enemy-area .base-life,#playerBaseArea,.player-area .grave,#baseLv3ActivateConfirmButton,#baseLv3ActivateCancelButton');
     if (!target || state.phase === 'mulligan') return;
     event.preventDefault(); event.stopImmediatePropagation();
     if (target.id === 'cancelActionButton' || target.id === 'cancelBattleActionButton') return cancelSelection();
-    if (sending || state.ended) return;
+    if (sending || state.ended || window.onlineFeedbackBusy) return;
     const c = ownChoice();
     if (c) {
       const o = c.options.find(o => { const e = targetElement(o.target); return e && (e === target || e.contains(event.target)); });

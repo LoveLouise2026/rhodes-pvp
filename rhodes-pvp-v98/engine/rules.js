@@ -173,6 +173,11 @@ module.exports = function createRules(mainCards, baseCards) {
 
   function resolveEffect(g, t) {
     const p = player(g, t.owner), op = other(g, p.id), id = t.cardId, stage = t.stage || 0, picks = t.picks || [];
+    // Presentation metadata follows the same visibility boundary as the source card.
+    const publicSource = t.event !== 'added' && (p.field.includes(id) || p.baseStack.includes(id) || p.grave.includes(id));
+    log(g, `${p.name}处理【${card(id)?.name || '卡牌'}】效果`, {
+      feedback: 'effect', cardId: id, by: p.id, sourceSlot: t.source?.slot ?? t.trapSlot
+    }, publicSource ? null : p.id);
     const choose = (next, opts, config) => ask(g, t, next, opts, config);
     const sourceExists = () => live(g, t.source) && p.field[t.source.slot] === id;
     switch (id) {
@@ -386,7 +391,7 @@ module.exports = function createRules(mainCards, baseCards) {
           if (t.stage === 1) {
             if (!t.picks.length) break;
             const s = t.picks[0], id = p.traps[s].cardId; p.traps[s] = null; p.grave.push(id);
-            log(g, `${p.name}发动陷阱【${card(id).name}】`, { cardId: id, slot: s });
+            log(g, `${p.name}发动陷阱【${card(id).name}】`, { cardId: id, slot: s, feedback: 'use_tactic', by: p.id, sourceSlot: s });
             push(g, { type: 'reaction', owner: p.id, event: t.event });
             tacticTriggers(g, p, id);
             push(g, effect(p.id, id, { trapSlot: s }));
@@ -455,7 +460,8 @@ module.exports = function createRules(mainCards, baseCards) {
       } else {
         check(c.tacticType === '通常', '只有通常战术可以直接使用。');
         if (c.id === 'SD02-0009') check(p.field.some((id, i) => id && p.field.some((j, s) => j && adjacent(i, s))), '没有相邻干员可使用协同作战。');
-        p.hand.splice(index, 1); p.grave.push(c.id); log(g, `${p.name}使用【${c.name}】`, { cardId: c.id });
+        p.hand.splice(index, 1); p.grave.push(c.id);
+        log(g, `${p.name}使用【${c.name}】`, { cardId: c.id, feedback: 'use_tactic', by: p.id });
         const snapshot = trait(c.id, '罗德岛') ? huangTasks(g, p) : [];
         if (c.id === 'SD01-0013') push(g, effect(owner, c.id, { tacticHuang: snapshot }));
         else { tacticTriggers(g, p, c.id); push(g, effect(owner, c.id)); }
