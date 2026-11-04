@@ -4,6 +4,8 @@
 <head>
 
 <meta charset="UTF-8">
+<script src="/battle-feedback.js"></script>
+<link rel="stylesheet" href="/battle-feedback.css">
 
 <title>TCG游戏原型 V2.0</title>
 
@@ -11312,6 +11314,8 @@ async function playTacticUseAnimation(
     side,
     card
 ){
+    const finishFeedback=window.battleFeedback?.beginEffect(card,"使用战术");
+    try{
 
     let flash=
         document.createElement(
@@ -11397,7 +11401,10 @@ async function playTacticUseAnimation(
 
     visual.remove();
     flash.remove();
-
+    }
+    finally{
+        finishFeedback?.();
+    }
 }
 
 
@@ -11595,6 +11602,13 @@ async function emitGameEffectEvent(
     eventType,
     context
 ){
+    const startedAt=Date.now();
+    const finishFeedback=window.battleFeedback?.beginEffect(
+        context && context.cardData,
+        "正在处理"+eventType,
+        context && context.cardElement
+    );
+    try{
 
     let handlers=
         gameEffectRegistry[
@@ -11610,7 +11624,13 @@ async function emitGameEffectEvent(
         );
 
     }
-
+    }
+    finally{
+        if(finishFeedback){
+            await new Promise(resolve=>setTimeout(resolve,Math.max(0,350-(Date.now()-startedAt))));
+            finishFeedback();
+        }
+    }
 }
 
 
@@ -11825,6 +11845,8 @@ function showEffectDeploySlotHints(){
 // =====================
 async function playOperatorEffectGlow(cardElement){
     if(!cardElement) return;
+    const finishFeedback=window.battleFeedback?.beginEffect(cardElement.cardData,"发动效果",cardElement);
+    try{
 
     cardElement.classList.remove(
         "operator-effect-activating"
@@ -11844,6 +11866,10 @@ async function playOperatorEffectGlow(cardElement){
     cardElement.classList.remove(
         "operator-effect-activating"
     );
+    }
+    finally{
+        finishFeedback?.();
+    }
 }
 
 
@@ -16644,6 +16670,7 @@ trapCard.onclick=function(event){
 trapCard.addEventListener(
     "mouseenter",
     function(event){
+        if(this.cardData && typeof showDetail==="function") showDetail(this.cardData);
         showDeckCount(
             this.cardData.name,
             event
@@ -17052,6 +17079,7 @@ function showEnemyHand(){
 // =====================
 
 async function startGame(){
+    if(window.battleFeedback) await window.battleFeedback.turn(currentPlayer,currentTurn);
 
     // 新的行动回合开始。
     // 本序号用于判断“登场回合不能攻击”。
@@ -24553,7 +24581,7 @@ const ACCOUNT_KEY="rhodesLocalAccountsV68", SESSION_KEY="rhodesLoggedUserV68", D
 let matchTimer=null,currentDeck=[];
 const $=id=>document.getElementById(id);
 function screenMap(){return {auth:$("authScreenV68"),menu:$("mainMenuScreenV68"),match:$("matchLobbyScreenV68"),custom:$("customLobbyScreenV68"),deck:$("deckEditorScreenV68")};}
-function showScreen(name){const m=screenMap();Object.keys(m).forEach(k=>m[k]&&m[k].classList.toggle("v68-active",k===name));const shell=$("appShellV68");if(shell)shell.classList.toggle("v68-battle-active",name==="battle");document.body.classList.toggle("v96-battle-active",name==="battle");}
+function showScreen(name){const m=screenMap();Object.keys(m).forEach(k=>m[k]&&m[k].classList.toggle("v68-active",k===name));const shell=$("appShellV68");if(shell)shell.classList.toggle("v68-battle-active",name==="battle");document.body.classList.toggle("v96-battle-active",name==="battle");document.documentElement.removeAttribute("data-battle-boot");}
 function getUser(){try{return sessionStorage.getItem(SESSION_KEY)||""}catch(e){return ""}}
 function setUser(v){try{v?sessionStorage.setItem(SESSION_KEY,v):sessionStorage.removeItem(SESSION_KEY)}catch(e){}}
 function msg(text,ok){const el=$("authMessageV68");if(el){el.textContent=text||"";el.style.color=ok?"#a8d6b9":"#e1ad9d"}}
@@ -24598,7 +24626,7 @@ try{
 if(!resumingBattle){
     setUser("");
 }
-showScreen("auth")}
+showScreen(window.battleFeedback?.shouldEnterBattle() ? "battle" : "auth")}
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",bind,{once:true});else bind();
 })();
 </script>
@@ -33720,6 +33748,10 @@ body.v96-battle-active.v94-pvp-active #v97SurrenderButton{
 
         const previous=st.server;
         const animation=deployAnimationPlan(message,previous);
+        st.pending=true;
+        if(window.setOnlineFeedbackBusy) window.setOnlineFeedbackBusy(true);
+        try{
+        if(window.battleFeedback) await window.battleFeedback.transition(message,previous);
 
         st.active=true;
         document.body.classList.add("v94-pvp-active");
@@ -33791,6 +33823,11 @@ body.v96-battle-active.v94-pvp-active #v97SurrenderButton{
         catch(error){}
 
         maybePromptLv1Base(message);
+        }
+        finally{
+            st.pending=false;
+            if(window.setOnlineFeedbackBusy) window.setOnlineFeedbackBusy(false);
+        }
     }
 
     function enqueueApply(message){

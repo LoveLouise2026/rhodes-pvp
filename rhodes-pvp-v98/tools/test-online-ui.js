@@ -68,3 +68,22 @@ s=snapshot();render(s);connected=false;click(hand.children[0]);click(get('deploy
 render({...s,ended:true});assert.equal(query('.online-overlay'),null);assert.equal(get('onlineInteractionHint').hidden,true);
 assert.equal(localMutations,0,'online commands must never reach solo state-mutating handlers');context.onlineEffectsEnabled=false;click(hand.children[0]);assert.equal(localMutations,1,'solo clicks retain original behavior');
 console.log('Online UI checks passed: native menus, board targets, duplicate clicks, choices, costs, order, cancel, grave/base, errors and solo isolation');
+// Own set cards show details on hover, while the opponent's card identity stays hidden.
+context.onlineEffectsEnabled = true;
+s = snapshot();
+s.rules.players = [
+  { id: 'A', powers: [], meta: [], traps: Array.from({length:8}, (_,i) => i === 5 ? {cardId:'SD01-0015'} : null) },
+  { id: 'B', powers: [], meta: [], traps: Array.from({length:8}, (_,i) => i === 5 ? {hidden:true} : null) }
+];
+render(s);
+details.length = 0;
+for (const fn of listeners.mouseover || []) fn({target:slots.player[5].querySelector('.online-trap'),relatedTarget:null});
+assert.deepEqual(details, ['SD01-0015']);
+for (const fn of listeners.mouseover || []) fn({target:slots.enemy[5].querySelector('.online-trap'),relatedTarget:null});
+assert.deepEqual(details, ['SD01-0015']);
+context.setOnlineFeedbackBusy(true);
+const beforeFeedbackClick = messages.length;
+click(hand.children[0]); click(get('endTurnButton'));
+assert.equal(messages.length, beforeFeedbackClick);
+context.setOnlineFeedbackBusy(false);
+console.log('Hover privacy and animation input lock checks passed');

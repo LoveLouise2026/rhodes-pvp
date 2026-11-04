@@ -4,6 +4,7 @@ const path = require('node:path');
 const html = fs.readFileSync(path.join(__dirname, '../public/card-game.html'), 'utf8');
 new vm.Script(fs.readFileSync(path.join(__dirname, '../public/starter-decks.js'), 'utf8'));
 new vm.Script(fs.readFileSync(path.join(__dirname, '../public/online-effects.js'), 'utf8'));
+new vm.Script(fs.readFileSync(path.join(__dirname, '../public/battle-feedback.js'), 'utf8'));
 new vm.Script(fs.readFileSync(path.join(__dirname, 'card-manager/app.js'), 'utf8'));
 let count = 0;
 for (const match of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script\s*>/gi)) {

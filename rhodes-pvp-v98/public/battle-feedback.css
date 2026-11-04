@@ -1,0 +1,67 @@
+/* The head script marks battle reloads before the login markup is parsed. */
+html[data-battle-boot] #appShellV68 { display: none !important; }
+.battle-effect-active {
+  animation: battleEffectGlow .65s ease-in-out infinite alternate !important;
+  outline: 2px solid #b9f1ff !important;
+  outline-offset: -2px;
+}
+@keyframes battleEffectGlow {
+  from { box-shadow: inset 0 0 8px #80dfff, 0 0 8px #80dfff; }
+  to { box-shadow: inset 0 0 18px #e3fbff, 0 0 28px #80dfff; }
+}
+#battleEffectStatus {
+  position: fixed;
+  left: 50%; top: 64px;
+  transform: translateX(-50%);
+  max-width: 85vw;
+  padding: 10px 20px;
+  border: 1px solid #9fe5ff;
+  border-radius: 8px;
+  background: #152a3bf5;
+  color: white;
+  box-shadow: 0 0 18px #80dfff80;
+  font: 16px/1.5 sans-serif;
+  z-index: 10010;
+  pointer-events: none;
+}
+#battleEffectStatus[hidden] { display: none; }
+.battle-effect-preview {
+  position: fixed;
+  left: calc(50% - 65px); top: calc(50% - 90px);
+  width: 130px; height: 180px;
+  display: grid; place-content: center;
+  padding: 10px;
+  border: 2px solid #c8f5ff;
+  border-radius: 10px;
+  background: #17324bf5;
+  color: white;
+  text-align: center;
+  white-space: pre-line;
+  box-shadow: 0 0 18px #a7edff, 0 0 42px #80dfff80;
+  font: bold 17px/1.5 sans-serif;
+  z-index: 10005;
+  pointer-events: none;
+}
+#battleTurnBanner {
+  position: fixed;
+  left: 50%; top: 42%;
+  padding: 20px 45px;
+  border: 2px solid #c0eaff;
+  border-radius: 12px;
+  background: #142b44f5;
+  color: white;
+  text-align: center;
+  font: bold clamp(20px, 4vw, 30px)/1.5 sans-serif;
+  z-index: 10000;
+  pointer-events: none;
+  animation: battleTurnArrival .95s ease both;
+}
+@keyframes battleTurnArrival {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(.85); }
+  20%, 75% { opacity: 1; transform: translate(-50%, -50%) scale(1); box-shadow: 0 0 35px #80cfff99; }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.05); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .battle-effect-active { animation: none !important; box-shadow: 0 0 18px #80dfff; }
+  #battleTurnBanner { animation: none; transform: translate(-50%, -50%); }
+}
